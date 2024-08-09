@@ -1,0 +1,10 @@
+[Unit]
+Description=Updaterar hosts-filen
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash $HOME/.local/bin/get_hosts-file.sh
+
+[Install]
+WantedBy=multi-user.target
