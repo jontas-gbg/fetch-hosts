@@ -1,9 +1,9 @@
 [Unit]
-Description=Veckovis uppdatering av hosts-filen
+Description=Timer för uppdatering av hosts-filen
 
 [Timer]
-OnCalendar=weekly
-Persistent=true
+OnBootSec=15min
+OnUnitActiveSec=6h
 
 [Install]
 WantedBy=timers.target
