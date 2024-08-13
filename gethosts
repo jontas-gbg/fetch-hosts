@@ -1,0 +1,43 @@
+#!/bin/bash
+
+ADAWAY_BLOCK_HOSTS_URL="https://adaway.org/hosts.txt"
+FRELLWITS_HOSTS_URL="https://raw.githubusercontent.com/lassekongo83/Frellwits-filter-lists/master/Frellwits-Swedish-Hosts-File.txt"
+BLOCK_JAVASCRIPT_MINERS="https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt"
+
+CACHE_DIR="/tmp/hosts_cache"
+TEMP_FILE="/tmp/combined_hosts.txt"
+TARGET_FILE="/etc/hosts"
+LOG_DIR="$HOME/.logs"
+LOG_FILE="$LOG_DIR/hosts_update.log"
+
+mkdir -p "$LOG_DIR" "$CACHE_DIR"
+
+log() {
+  echo "$(date +'%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
+}
+
+# Ta alltid bort temp-filer även om scriptet avbryts
+trap 'rm -f "$CACHE_DIR"/*.txt "$TEMP_FILE"' EXIT
+
+download_and_cache() {
+  local url="$1"
+  local cache_file="$2"
+  # Kontrollera Last-modified header innan hämtning
+  local last_modified=$(curl -s -I "$url" | grep -i "Last-Modified" | cut -d ' ' -f 2-)
+  if [[ ! -f "$cache_file" || $(date -d "$last_modified" +%s) -gt $(stat -c %Y "$cache_file") ]]; then
+    log "Downloading $url"
+    curl -s "$url" -o "$cache_file" || log "Download failed: $url"
+  fi
+}
+
+download_and_cache "$ADAWAY_BLOCK_HOSTS_URL" "$CACHE_DIR/adaway.txt"
+download_and_cache "$FRELLWITS_HOSTS_URL" "$CACHE_DIR/frellwits.txt"
+download_and_cache "$BLOCK_JAVASCRIPT_MINERS" "$CACHE_DIR/miners.txt"
+
+cat "$CACHE_DIR/"*.txt | grep -v "#" | sort | uniq > "$TEMP_FILE"
+
+if [[ -s "$TEMP_FILE" && $(wc -l < "$TEMP_FILE") -gt 10 ]]; then
+  sudo cp "$TEMP_FILE" "$TARGET_FILE" && log "Hosts-filen uppdaterad: $(date +'%Y-%m-%d %H:%M:%S')" || log "Fel vid kopiering: $(date +'%Y-%m-%d %H:%M:%S')"
+else
+  log "Felaktig filstorlek eller antal rader: $(stat -c%s "$TEMP_FILE") bytes, $(wc -l < "$TEMP_FILE") rader"
+fi
