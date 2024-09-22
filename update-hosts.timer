@@ -1,5 +1,5 @@
 [Unit]
-Description=Timer för uppdatering av hosts-filen
+Description=Update hosts file
 
 [Timer]
 OnBootSec=15min
